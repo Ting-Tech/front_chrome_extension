@@ -13,15 +13,14 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 
-// 明確定義 userDatas 的類型
-type UserData = { [key: string]: { password: string } }; // 修改為物件形式
+type UserData = { [key: string]: { password: string } };
 
-const userDatas = ref<UserData>({}); // 用來存儲用戶資料的物件
-const inputValue = ref<{ username: string; password: string }>({ username: '', password: '' }); // 使用對象來存儲 username 和 password
+const userDatas = ref<UserData>({});
+const inputValue = ref<{ username: string; password: string }>({ username: '', password: '' });
 
 const formSchema = toTypedSchema(z.object({
   username: z.string().min(2).max(50),
-  password: z.string().min(6).max(50), // 你可以根據需要調整密碼的驗證條件
+  password: z.string().min(6).max(50),
 }));
 
 const { handleSubmit } = useForm({
@@ -29,7 +28,6 @@ const { handleSubmit } = useForm({
 });
 
 const saveToLocalStorage = () => {
-  // 將 inputValue 複製到 userDatas 中
   userDatas.value[inputValue.value.username] = { password: inputValue.value.password };
   console.log('userDatas:', userDatas.value);
   chrome.storage.local.set({ users: userDatas.value }, () => {
@@ -39,15 +37,16 @@ const saveToLocalStorage = () => {
 };
 
 const onSubmit = handleSubmit((values) => {
-  inputValue.value = values; // 保存表單中的 username 和 password 到 inputValue
-  saveToLocalStorage(); // 在提交後保存到 local storage
+  inputValue.value = values;
+  saveToLocalStorage();
+  inputValue.value = { username: '', password: '' };
 });
 
 onMounted(() => {
   chrome.storage.local.get(['users'], async (result) => {
     console.log('Value retrieved from localStorage:', result.users);
     if (result.users) {
-      userDatas.value = result.users; // 從 localStorage 讀取的值
+      userDatas.value = result.users;
       console.log('從 localStorage 讀取的值:', result.users);
     }
   });

@@ -20,7 +20,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from '@/components/ui/form';
 import {
   Popover,
@@ -60,8 +59,10 @@ const loadFromLocalStorage = async (username: string) => {
           func: (username, password) => {
             const xpathUserName = "//div[contains(@class, 'login-form')]//form//input[@type='text']";
             const elUserName = document.evaluate(xpathUserName, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue as HTMLInputElement | null;
-            const xpathPassword = "//div[contains(@class, 'login-form')]//form//input[@type='password']"; // 確保這裡的 XPath 正確
+            const xpathPassword = "//div[contains(@class, 'login-form')]//form//input[@type='password']";
             const elPassword = document.evaluate(xpathPassword, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue as HTMLInputElement | null;
+            const xPathLoginButton = "//div[contains(@class, 'login-form')]//form//button";
+            const elPathLoginButton = document.evaluate(xPathLoginButton, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue as HTMLButtonElement | null;
             if (elUserName) {
               elUserName.value = username;
               elUserName.dispatchEvent(new Event("input", { bubbles: true }));
@@ -73,6 +74,11 @@ const loadFromLocalStorage = async (username: string) => {
               elPassword.dispatchEvent(new Event("input", { bubbles: true }));
             } else {
               console.error("目標輸入框未找到");
+            }
+            if (elPathLoginButton) {
+              elPathLoginButton.click();
+            } else {
+              console.error("目標按鈕未找到");
             }
           },
         });
@@ -164,7 +170,6 @@ onBeforeUnmount(() => {
             </Command>
           </PopoverContent>
         </Popover>
-        <FormMessage />
       </FormItem>
     </FormField>
 
