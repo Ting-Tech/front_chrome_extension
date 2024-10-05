@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
@@ -42,14 +42,28 @@ const onSubmit = handleSubmit((values) => {
   inputValue.value = { username: '', password: '' };
 });
 
-onMounted(() => {
-  chrome.storage.local.get(['users'], async (result) => {
-    console.log('Value retrieved from localStorage:', result.users);
+// 監聽 local storage 更新
+const loadUsers = () => {
+  chrome.storage.local.get("users", (result) => {
     if (result.users) {
       userDatas.value = result.users;
-      console.log('從 localStorage 讀取的值:', result.users);
     }
   });
+};
+
+const handleStorageChange = (changes: any, area: string) => {
+    if (area === 'local' && changes.users) {
+      loadUsers();
+    }
+  };
+
+onMounted(() => {
+  loadUsers();
+  chrome.storage.onChanged.addListener(handleStorageChange);
+});
+
+onBeforeUnmount(() => {
+  chrome.storage.onChanged.removeListener(handleStorageChange);
 });
 </script>
 
@@ -60,7 +74,7 @@ onMounted(() => {
       <FormItem>
         <FormLabel>Username</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="username" v-bind="componentField" v-model="inputValue.username" />
+          <Input type="text" placeholder="Username" v-bind="componentField" v-model="inputValue.username" />
         </FormControl>
       </FormItem>
     </FormField>
@@ -68,7 +82,7 @@ onMounted(() => {
       <FormItem>
         <FormLabel>Password</FormLabel>
         <FormControl>
-          <Input type="password" placeholder="password" v-bind="componentField" v-model="inputValue.password" />
+          <Input type="password" placeholder="Password" v-bind="componentField" v-model="inputValue.password" />
         </FormControl>
       </FormItem>
     </FormField>

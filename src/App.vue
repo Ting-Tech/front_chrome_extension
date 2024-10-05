@@ -3,10 +3,10 @@ import {savelogin, loadLogin} from './components/login';
 </script>
 
 <template>
-  <div class="flex flex-col place-items-center">
-    <loadLogin class="mb-8 mt-8"/>
-    <savelogin />
-  </div>
+    <div class="flex flex-col place-items-center my-8 gap-2">
+      <loadLogin/>
+      <savelogin />
+    </div>
 </template>
 
 <style scoped>

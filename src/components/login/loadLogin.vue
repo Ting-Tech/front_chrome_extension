@@ -27,6 +27,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { toast } from '@/components/ui/toast';
+import { Trash } from 'lucide-vue-next';
 
 const users = ref<{ [key: string]: { password: string } }>({});
 
@@ -102,6 +103,17 @@ const onSubmit = handleSubmit((values) => {
   });
 });
 
+const handleDelete = (userToDelete: string) => {
+  const { [userToDelete]: _, ...newUsers } = users.value;
+
+  users.value = newUsers;
+
+  chrome.storage.local.set({ users: newUsers }, () => {
+    console.log(`User ${userToDelete} has been deleted.`);
+    alert(`用戶 ${userToDelete} 已被刪除！`);
+  });
+};
+
 // 監聽 local storage 更新
 const loadUsers = () => {
   chrome.storage.local.get("users", (result) => {
@@ -163,7 +175,10 @@ onBeforeUnmount(() => {
                     <Check
                       :class="cn('mr-2 h-4 w-4', user === values.username ? 'opacity-100' : 'opacity-0')"
                     />
-                    {{ user }}
+                    <div class="flex flex-row justify-between items-center w-full">
+                      {{ user }}
+                      <Button variant="outline" size="icon" @click="() => handleDelete(user)"><Trash class="w-4 h-4"/></Button>
+                    </div>
                   </CommandItem>
                 </CommandGroup>
               </CommandList>
