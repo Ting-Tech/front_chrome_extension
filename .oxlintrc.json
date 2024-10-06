@@ -2,5 +2,12 @@
     "env": {
         "browser": true
     },
-    "rules": {}
+    "globals": {
+        "foo": "readonly"
+    },
+    "settings": {},
+    "rules": {
+        "eqeqeq": "warn",
+        "import/no-cycle": "error"
+    }
 }
