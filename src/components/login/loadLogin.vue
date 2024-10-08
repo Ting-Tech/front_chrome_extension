@@ -78,6 +78,7 @@ const loadFromLocalStorage = async (username: string) => {
             }
             if (elPathLoginButton) {
               elPathLoginButton.click();
+              chrome.storage.local.set({ lastUser: username });
             } else {
               toast({title: '目標按鈕未找到',});
               console.error("目標按鈕未找到");
@@ -124,6 +125,17 @@ const handleStorageChange = (changes: any, area: string) => {
 
 onMounted(() => {
   loadUsers();
+  chrome.storage.local.get("lastUser", (result) => {
+    if (result.lastUser) {
+      setFieldValue('username', result.lastUser);
+    }
+    else {
+      const userKeys = Object.keys(users.value);
+      if (userKeys.length > 0) {
+        setFieldValue('username', userKeys[0]);
+      }
+    }
+  });
   chrome.storage.onChanged.addListener(handleStorageChange);
 });
 
