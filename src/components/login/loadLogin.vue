@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
@@ -49,8 +49,6 @@ const loadFromLocalStorage = async (username: string) => {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
         if (tab.id === undefined) {
-          console.error("Tab ID is undefined.");
-          alert('無法獲取當前標籤頁的 ID。');
           return;
         }
 
@@ -68,39 +66,35 @@ const loadFromLocalStorage = async (username: string) => {
               elUserName.value = username;
               elUserName.dispatchEvent(new Event("input", { bubbles: true }));
             } else {
-              console.error("目標輸入框未找到");
+              toast({title: '用戶輸入框未找到',});
+              console.error("用戶輸入框未找到");
             }
             if (elPassword) {
               elPassword.value = password;
               elPassword.dispatchEvent(new Event("input", { bubbles: true }));
             } else {
-              console.error("目標輸入框未找到");
+              toast({title: '密碼輸入框未找到',});
+              console.error("密碼輸入框未找到");
             }
             if (elPathLoginButton) {
               elPathLoginButton.click();
             } else {
+              toast({title: '目標按鈕未找到',});
               console.error("目標按鈕未找到");
             }
           },
         });
 
-        alert('資料已載入並注入到目標頁面！');
       } catch (error) {
         console.error('注入腳本時出錯:', error);
-        alert('注入資料時出現錯誤！');
       }
     } else {
-      alert('沒有找到該用戶的資料！');
     }
   });
 };
 
 const onSubmit = handleSubmit((values) => {
   loadFromLocalStorage(values.username);
-  toast({
-    title: 'You submitted the following username:',
-    description: h('pre', { class: 'mt-2 w-[340px] rounded-md bg-slate-950 p-4' }, h('code', { class: 'text-white' }, JSON.stringify(values.username, null, 2))),
-  });
 });
 
 const handleDelete = (userToDelete: string) => {
@@ -109,8 +103,7 @@ const handleDelete = (userToDelete: string) => {
   users.value = newUsers;
 
   chrome.storage.local.set({ users: newUsers }, () => {
-    console.log(`User ${userToDelete} has been deleted.`);
-    alert(`用戶 ${userToDelete} 已被刪除！`);
+    toast({title: `用戶 ${userToDelete} 已被刪除！`,});
   });
 };
 
@@ -141,7 +134,7 @@ onBeforeUnmount(() => {
 
 <template>
   <!-- {{ users }} -->
-  <form class="w-2/3 flex flex-row justify-between items-end" @submit="onSubmit">
+  <form class="w-full flex flex-row justify-between items-end" @submit="onSubmit">
     <FormField name="username">
       <FormItem class="flex flex-col">
         <FormLabel>Username</FormLabel>

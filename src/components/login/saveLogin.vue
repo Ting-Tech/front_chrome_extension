@@ -12,6 +12,9 @@ import {
   FormLabel,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { useToast } from '@/components/ui/toast/use-toast'
+
+const {toast} = useToast();
 
 type UserData = { [key: string]: { password: string } };
 
@@ -31,8 +34,7 @@ const saveToLocalStorage = () => {
   userDatas.value[inputValue.value.username] = { password: inputValue.value.password };
   console.log('userDatas:', userDatas.value);
   chrome.storage.local.set({ users: userDatas.value }, () => {
-    console.log('Value saved to localStorage:', userDatas.value);
-    alert('資料已儲存！');
+    toast({title: `用戶 ${userDatas.value.username} 已被儲存！`,});
   });
 };
 
@@ -69,7 +71,7 @@ onBeforeUnmount(() => {
 
 <template>
   <!-- {{ userDatas }} -->
-  <form class="w-2/3 space-y-6" @submit="onSubmit">
+  <form class="w-full space-y-6" @submit="onSubmit">
     <FormField v-slot="{ componentField }" name="username">
       <FormItem>
         <FormLabel>Username</FormLabel>
