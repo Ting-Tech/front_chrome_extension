@@ -1,47 +1,53 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { useForm } from 'vee-validate'
-import { toTypedSchema } from '@vee-validate/zod'
-import * as z from 'zod'
+import { onBeforeUnmount, onMounted, ref } from "vue";
+import { useForm } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import * as z from "zod";
 
-import { Button } from '@/components/ui/button'
+import { Button } from "@/components/ui/button";
 import {
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { useToast } from '@/components/ui/toast/use-toast'
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast/use-toast";
 
-const {toast} = useToast();
+const { toast } = useToast();
 
 type UserData = { [key: string]: { password: string } };
 
 const userDatas = ref<UserData>({});
-const inputValue = ref<{ username: string; password: string }>({ username: '', password: '' });
+const inputValue = ref<{ username: string; password: string }>({
+  username: "",
+  password: "",
+});
 
-const formSchema = toTypedSchema(z.object({
-  username: z.string().min(2).max(50),
-  password: z.string().min(6).max(50),
-}));
+const formSchema = toTypedSchema(
+  z.object({
+    username: z.string().min(1).max(15),
+    password: z.string().min(1).max(15),
+  })
+);
 
 const { handleSubmit } = useForm({
   validationSchema: formSchema,
 });
 
 const saveToLocalStorage = () => {
-  userDatas.value[inputValue.value.username] = { password: inputValue.value.password };
-  console.log('userDatas:', userDatas.value);
+  const { username, password } = inputValue.value;
+  userDatas.value[username] = { password };
+
   chrome.storage.local.set({ users: userDatas.value }, () => {
-    toast({title: `用戶 ${userDatas.value.username} 已被儲存！`,});
+    toast({ title: `用戶 ${username} 已被儲存！` });
   });
 };
 
 const onSubmit = handleSubmit((values) => {
   inputValue.value = values;
   saveToLocalStorage();
-  inputValue.value = { username: '', password: '' };
+  inputValue.value = { username: "", password: "" };
 });
 
 // 監聽 local storage 更新
@@ -54,10 +60,10 @@ const loadUsers = () => {
 };
 
 const handleStorageChange = (changes: any, area: string) => {
-    if (area === 'local' && changes.users) {
-      loadUsers();
-    }
-  };
+  if (area === "local" && changes.users) {
+    loadUsers();
+  }
+};
 
 onMounted(() => {
   loadUsers();
@@ -76,7 +82,12 @@ onBeforeUnmount(() => {
       <FormItem>
         <FormLabel>Username</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Username" v-bind="componentField" v-model="inputValue.username" />
+          <Input
+            type="text"
+            placeholder="Username"
+            v-bind="componentField"
+            v-model="inputValue.username"
+          />
         </FormControl>
       </FormItem>
     </FormField>
@@ -84,7 +95,12 @@ onBeforeUnmount(() => {
       <FormItem>
         <FormLabel>Password</FormLabel>
         <FormControl>
-          <Input type="password" placeholder="Password" v-bind="componentField" v-model="inputValue.password" />
+          <Input
+            type="password"
+            placeholder="Password"
+            v-bind="componentField"
+            v-model="inputValue.password"
+          />
         </FormControl>
       </FormItem>
     </FormField>
