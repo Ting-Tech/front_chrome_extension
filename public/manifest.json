@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "cms-tool",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "使用 Vue 3 開發的瀏覽器插件示例",
     "action": {
         "default_popup": "index.html",
@@ -22,7 +22,7 @@
         "topSites"
     ],
     "host_permissions": [
-        "http://localhost:5173/#/login"
+        "*://*/*"
     ],
     "optional_host_permissions": [
         "https://*/*",
