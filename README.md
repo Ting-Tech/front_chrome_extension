@@ -19,17 +19,21 @@ cd front_chrome_extension
 npm install
 ```
 
-To hardreload run
+To hotreload run
 
-```
-npm run dev
-```
+- **remove the `dist` folder first**
+- then
+	```
+	npm run dev
+	```
 
 To build the extension
 
-```
-npm run build
-```
+- **remove the `dist` folder first**
+- then
+	```
+	npm run build
+	```
 
 This will build the extension and create a directory called `dist`. Steps may vary depending on the browser you are using, but generally:
 

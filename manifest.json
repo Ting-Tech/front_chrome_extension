@@ -29,7 +29,7 @@
         "http://*/*"
     ],
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "src/background.js"
     },
-    "devtools_page": "register.html"
+    "devtools_page": "src/panel-register.html"
 }
