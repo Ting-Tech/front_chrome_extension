@@ -77,7 +77,7 @@ onBeforeUnmount(() => {
 
 <template>
   <!-- {{ userDatas }} -->
-  <form class="w-full space-y-6" @submit="onSubmit">
+  <form class="w-full space-y-2" @submit="onSubmit">
     <FormField v-slot="{ componentField }" name="username">
       <FormItem>
         <FormLabel>Username</FormLabel>
