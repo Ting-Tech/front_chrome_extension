@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import * as z from "zod";
@@ -13,6 +13,21 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast/use-toast";
+
+const props = defineProps({
+  selectedTab: {
+    type: String,
+    required: true,
+  },
+});
+
+watch(
+  () => props.selectedTab,
+  (newTab) => {
+    console.log("選擇的環境變更為:", newTab);
+    // 可以根據新值執行相應的操作
+  }
+);
 
 const { toast } = useToast();
 

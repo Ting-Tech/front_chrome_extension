@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import * as z from "zod";
@@ -28,6 +28,20 @@ import {
 } from "@/components/ui/popover";
 import { toast } from "@/components/ui/toast";
 import { Trash } from "lucide-vue-next";
+
+const props = defineProps({
+  selectedTab: {
+    type: String,
+    required: true,
+  },
+});
+watch(
+  () => props.selectedTab,
+  (newTab) => {
+    console.log("選擇的環境變更為:", newTab);
+    // 可以根據新值執行相應的操作
+  }
+);
 
 const users = ref<{ [key: string]: { password: string } }>({});
 
