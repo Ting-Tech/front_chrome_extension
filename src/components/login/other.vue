@@ -24,9 +24,13 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Label } from "@/components/ui/label";
 import { File } from "lucide-vue-next";
 import { ref, watchEffect } from "vue";
+import Input from "../ui/input/Input.vue";
+import { toast } from "../ui/toast";
 
+const isDrawerOpen = ref<boolean>(false);
 const toggleValue = ref<string[]>([]);
 const selectAll = ref<boolean>(false);
+const fileInput = ref<{ [key: string]: { [key: string]: { password: string } }}>({});
 
 const handleExport = () => {
   chrome.storage.local.get("users", function(result) {
@@ -40,8 +44,6 @@ const handleExport = () => {
         };
       }
     });
-
-    console.log(selectedData);
 
     if (selectedData) {
       // 轉換 users 資料為 JSON 字符串
@@ -65,10 +67,62 @@ const handleExport = () => {
   });
 }
 
+const handleImport = () => {
+  chrome.storage.local.get("users", function(result) {
+    let currentData = result.users || {};
+
+    toggleValue.value.forEach((item) => {
+      const importUsers = fileInput.value[item];
+
+      if (importUsers) {
+        currentData = {
+          ...currentData,
+          [item]: {
+            ...currentData?.[item],
+            ...importUsers
+          }
+        };
+      }
+    });
+
+    chrome.storage.local.set({ users: currentData }, () => {
+      toast({ title: "資料已更新" });
+    });
+    isDrawerOpen.value = false;
+  });
+}
+
+const handleSelectFile = (event: any) => {
+  const file = event.target.files[0]; // 獲取選擇的檔案
+  
+  if (file && file.type === 'application/json') {
+    const reader = new FileReader();
+    
+    // 當文件讀取完成後，解析為 JSON 資料
+    reader.onload = (e) => {
+      const fileContent = e.target?.result; // 讀取檔案內容
+
+      // 確保內容是字串
+      if (typeof fileContent === 'string') {
+        try {
+          const parsedData = JSON.parse(fileContent); // 解析 JSON 字符串
+          fileInput.value = parsedData; // 儲存解析後的資料
+        } catch (error) {
+          console.error("Invalid JSON file:", error);
+        }
+      } else {
+        console.error("The file content is not a valid string.");
+      }
+    };
+    
+    // 開始讀取文件內容
+    reader.readAsText(file);
+  } else {
+    console.error("Please upload a valid JSON file.");
+  }
+}
+
 watchEffect(() => {
-  // if (toggleValue.value.length != 5) {
-  //   toggleValue.value = toggleValue.value.filter((item) => item !== 'all');
-  // }
   if (!selectAll.value && toggleValue.value.includes('all')) {
     toggleValue.value = ['dev', 'uat', 'staging', 'prod', 'all'];
     selectAll.value = true;
@@ -77,14 +131,11 @@ watchEffect(() => {
     toggleValue.value = toggleValue.value.filter((item) => item !== 'all');
     selectAll.value = false;
   }
-
-  console.log(toggleValue.value);
 });
-
 </script>
 
 <template>
-  <Drawer>
+  <Drawer v-model:open="isDrawerOpen">
     <DrawerTrigger as-child>
       <Button variant="secondary" class="w-full mt-2"> Other </Button>
     </DrawerTrigger>
@@ -96,7 +147,7 @@ watchEffect(() => {
             All the other operation will be here
           </DrawerDescription>
         </DrawerHeader>
-        <Tabs default-value="share" class="w-full">
+        <Tabs default-value="import" class="w-full">
           <TabsList class="grid w-full grid-cols-2">
             <TabsTrigger value="import"> Import </TabsTrigger>
             <TabsTrigger value="export"> Export </TabsTrigger>
@@ -108,48 +159,49 @@ watchEffect(() => {
                 <CardDescription> Import the select data here </CardDescription>
               </CardHeader>
               <CardContent class="space-y-2">
-                <div class="flex flex-row items-center">
-                  <Button variant="ghost" size="icon"><File /></Button>
-                  <Label for="select"> Select a file </Label>
-                </div>
                 <ToggleGroup
+                  v-model="toggleValue"
                   type="multiple"
                   class="flex flex-col content-start items-start"
                 >
                   <ToggleGroupItem value="dev">
                     <div class="items-top flex space-x-2">
-                      <Checkbox id="dev" />
+                      <Checkbox id="dev" :checked="toggleValue.includes('dev')" />
                       <Label for="dev"> DEV </Label>
                     </div>
                   </ToggleGroupItem>
                   <ToggleGroupItem value="uat">
                     <div class="items-top flex space-x-2">
-                      <Checkbox id="uat" />
+                      <Checkbox id="uat" :checked="toggleValue.includes('uat')" />
                       <Label for="uat"> UAT </Label>
                     </div>
                   </ToggleGroupItem>
                   <ToggleGroupItem value="staging">
                     <div class="items-top flex space-x-2">
-                      <Checkbox id="staging" />
+                      <Checkbox id="staging" :checked="toggleValue.includes('staging')" />
                       <Label for="staging"> STAGING </Label>
                     </div>
                   </ToggleGroupItem>
                   <ToggleGroupItem value="prod">
                     <div class="items-top flex space-x-2">
-                      <Checkbox id="prod" />
+                      <Checkbox id="prod" :checked="toggleValue.includes('prod')" />
                       <Label for="prod"> PROD </Label>
                     </div>
                   </ToggleGroupItem>
                   <ToggleGroupItem value="all">
                     <div class="items-top flex space-x-2">
-                      <Checkbox id="all" />
+                      <Checkbox id="all" :checked="toggleValue.includes('all')" />
                       <Label for="all"> ALL </Label>
                     </div>
                   </ToggleGroupItem>
                 </ToggleGroup>
+                <div class="flex flex-row items-center">
+                  <Label for="file"><File /></Label>
+                  <Input id="file" type="file" accept=".json" ref="fileInput" @change="handleSelectFile" />
+                </div>
               </CardContent>
               <CardFooter>
-                <Button class="w-full">Import</Button>
+                <Button class="w-full" @click="handleImport">Import</Button>
               </CardFooter>
             </Card>
           </TabsContent>
@@ -191,7 +243,7 @@ watchEffect(() => {
                   </ToggleGroupItem>
                   <ToggleGroupItem value="all">
                     <div class="items-top flex space-x-2">
-                      <Checkbox id="all" :checked="toggleValue.includes('all')"/>
+                      <Checkbox id="all" :checked="toggleValue.includes('all')" />
                       <Label for="all"> ALL </Label>
                     </div>
                   </ToggleGroupItem>
