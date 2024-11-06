@@ -39,6 +39,7 @@ watch(
   () => props.selectedTab,
   (newTab) => {
     console.log("選擇的環境變更為:", newTab);
+    handleTabChange();
     // 可以根據新值執行相應的操作
   }
 );
@@ -59,8 +60,9 @@ const { handleSubmit, setFieldValue, values } = useForm({
 
 const loadFromLocalStorage = async (username: string) => {
   chrome.storage.local.get("users", async (result) => {
-    if (result.users && result.users[username]) {
-      const { password } = result.users[username];
+    const selectedTabData = result.users?.[props.selectedTab];
+    if (selectedTabData && selectedTabData[username]) {
+      const { password } = selectedTabData[username];
       try {
         const [tab] = await chrome.tabs.query({
           active: true,
@@ -118,7 +120,6 @@ const loadFromLocalStorage = async (username: string) => {
             }
             if (elPathLoginButton) {
               elPathLoginButton.click();
-              chrome.storage.local.set({ lastUser: username });
             } else {
               toast({ title: "目標按鈕未找到" });
               console.error("目標按鈕未找到");
@@ -139,19 +140,28 @@ const onSubmit = handleSubmit((values) => {
 
 const handleDelete = (userToDelete: string) => {
   const { [userToDelete]: _, ...newUsers } = users.value;
-
   users.value = newUsers;
 
-  chrome.storage.local.set({ users: newUsers }, () => {
-    toast({ title: `用戶 ${userToDelete} 已被刪除！` });
+  chrome.storage.local.get("users", (result) => {
+    const currentUsers = result.users || {};
+
+    const updatedUsers = {
+      ...currentUsers,
+      [props.selectedTab]: newUsers
+    };
+
+    chrome.storage.local.set({ users: updatedUsers }, () => {
+      toast({ title: `用戶 ${userToDelete} 已被刪除！` });
+    });
   });
 };
 
 // 監聽 local storage 更新
 const loadUsers = () => {
   chrome.storage.local.get("users", (result) => {
-    if (result.users) {
-      users.value = result.users;
+    const selectedTabData = result.users?.[props.selectedTab];
+    if (selectedTabData) {
+      users.value = selectedTabData;
     }
   });
 };
@@ -162,11 +172,13 @@ const handleStorageChange = (changes: any, area: string) => {
   }
 };
 
-onMounted(() => {
+const handleTabChange = () => {
   loadUsers();
   chrome.storage.local.get("lastUser", (result) => {
-    if (result.lastUser) {
-      setFieldValue("username", result.lastUser);
+    const selectedTabData = result.lastUser?.[props.selectedTab];
+    
+    if (selectedTabData) {
+      setFieldValue("username", selectedTabData);
     } else {
       const userKeys = Object.keys(users.value);
       if (userKeys.length > 0) {
@@ -174,6 +186,25 @@ onMounted(() => {
       }
     }
   });
+};
+
+const handleHieldValue = (username: string) => {
+  setFieldValue("username", username);
+
+  chrome.storage.local.get("lastUser", (result) => {
+    const currentUsers = result.lastUser || {};
+
+      const updatedUsers = {
+        ...currentUsers,
+        [props.selectedTab]: username
+      };
+
+      chrome.storage.local.set({ lastUser: updatedUsers });
+  });
+}
+
+onMounted(() => {
+  handleTabChange();
   chrome.storage.onChanged.addListener(handleStorageChange);
 });
 
@@ -221,7 +252,7 @@ onBeforeUnmount(() => {
                     :value="user"
                     @select="
                       () => {
-                        setFieldValue('username', user);
+                        handleHieldValue(user);
                       }
                     "
                   >

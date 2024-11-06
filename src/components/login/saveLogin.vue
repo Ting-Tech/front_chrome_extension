@@ -54,9 +54,21 @@ const saveToLocalStorage = () => {
   const { username, password } = inputValue.value;
   userDatas.value[username] = { password };
 
-  chrome.storage.local.set({ users: userDatas.value }, () => {
-    toast({ title: `用戶 ${username} 已被儲存！` });
+  chrome.storage.local.get("users", (result) => {
+    const currentUsers = result.users || {}; // 取得現有的 users 資料，若無則設置為空對象
+
+    // 更新選擇的 tab 的數據，保留其他 tab
+    const updatedUsers = {
+      ...currentUsers,
+      [props.selectedTab]: userDatas.value
+    };
+
+    // 將更新後的 users 存回 chrome.storage.local
+    chrome.storage.local.set({ users: updatedUsers }, () => {
+      toast({ title: `用戶 ${username} 已被儲存！` });
+    });
   });
+  
 };
 
 const onSubmit = handleSubmit((values) => {
@@ -68,8 +80,9 @@ const onSubmit = handleSubmit((values) => {
 // 監聽 local storage 更新
 const loadUsers = () => {
   chrome.storage.local.get("users", (result) => {
-    if (result.users) {
-      userDatas.value = result.users;
+    const selectedTabData = result.users?.[props.selectedTab];
+    if (selectedTabData) {
+      userDatas.value = selectedTabData;
     }
   });
 };
