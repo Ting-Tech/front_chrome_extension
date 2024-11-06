@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { onMounted, onBeforeUnmount, watch } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import * as z from "zod";
@@ -28,23 +28,9 @@ import {
 } from "@/components/ui/popover";
 import { toast } from "@/components/ui/toast";
 import { Trash } from "lucide-vue-next";
+import { userDatas, tabProps, loadUsers, handleStorageChange } from "./login";
 
-const props = defineProps({
-  selectedTab: {
-    type: String,
-    required: true,
-  },
-});
-watch(
-  () => props.selectedTab,
-  (newTab) => {
-    console.log("選擇的環境變更為:", newTab);
-    handleTabChange();
-    // 可以根據新值執行相應的操作
-  }
-);
-
-const users = ref<{ [key: string]: { password: string } }>({});
+const props = defineProps(tabProps);
 
 const formSchema = toTypedSchema(
   z.object({
@@ -57,6 +43,55 @@ const formSchema = toTypedSchema(
 const { handleSubmit, setFieldValue, values } = useForm({
   validationSchema: formSchema,
 });
+
+const handleDelete = (userToDelete: string) => {
+  const { [userToDelete]: _, ...newUsers } = userDatas.value;
+  userDatas.value = newUsers;
+
+  chrome.storage.local.get("users", (result) => {
+    const currentUsers = result.users || {};
+
+    const updatedUsers = {
+      ...currentUsers,
+      [props.selectedTab]: newUsers,
+    };
+
+    chrome.storage.local.set({ users: updatedUsers }, () => {
+      toast({ title: `用戶 ${userToDelete} 已被刪除！` });
+    });
+  });
+};
+
+const handleTabChange = () => {
+  loadUsers(props.selectedTab);
+  chrome.storage.local.get("lastUser", (result) => {
+    const selectedTabData = result.lastUser?.[props.selectedTab];
+
+    if (selectedTabData) {
+      setFieldValue("username", selectedTabData);
+    } else {
+      const userKeys = Object.keys(userDatas.value);
+      if (userKeys.length > 0) {
+        setFieldValue("username", userKeys[0]);
+      }
+    }
+  });
+};
+
+const handleHieldValue = (username: string) => {
+  setFieldValue("username", username);
+
+  chrome.storage.local.get("lastUser", (result) => {
+    const currentUsers = result.lastUser || {};
+
+    const updatedUsers = {
+      ...currentUsers,
+      [props.selectedTab]: username,
+    };
+
+    chrome.storage.local.set({ lastUser: updatedUsers });
+  });
+};
 
 const loadFromLocalStorage = async (username: string) => {
   chrome.storage.local.get("users", async (result) => {
@@ -138,83 +173,29 @@ const onSubmit = handleSubmit((values) => {
   loadFromLocalStorage(values.username);
 });
 
-const handleDelete = (userToDelete: string) => {
-  const { [userToDelete]: _, ...newUsers } = users.value;
-  users.value = newUsers;
-
-  chrome.storage.local.get("users", (result) => {
-    const currentUsers = result.users || {};
-
-    const updatedUsers = {
-      ...currentUsers,
-      [props.selectedTab]: newUsers
-    };
-
-    chrome.storage.local.set({ users: updatedUsers }, () => {
-      toast({ title: `用戶 ${userToDelete} 已被刪除！` });
-    });
-  });
-};
-
-// 監聽 local storage 更新
-const loadUsers = () => {
-  chrome.storage.local.get("users", (result) => {
-    const selectedTabData = result.users?.[props.selectedTab];
-    if (selectedTabData) {
-      users.value = selectedTabData;
-    }
-  });
-};
-
-const handleStorageChange = (changes: any, area: string) => {
-  if (area === "local" && changes.users) {
-    loadUsers();
+watch(
+  () => props.selectedTab,
+  () => {
+    handleTabChange();
   }
-};
-
-const handleTabChange = () => {
-  loadUsers();
-  chrome.storage.local.get("lastUser", (result) => {
-    const selectedTabData = result.lastUser?.[props.selectedTab];
-    
-    if (selectedTabData) {
-      setFieldValue("username", selectedTabData);
-    } else {
-      const userKeys = Object.keys(users.value);
-      if (userKeys.length > 0) {
-        setFieldValue("username", userKeys[0]);
-      }
-    }
-  });
-};
-
-const handleHieldValue = (username: string) => {
-  setFieldValue("username", username);
-
-  chrome.storage.local.get("lastUser", (result) => {
-    const currentUsers = result.lastUser || {};
-
-      const updatedUsers = {
-        ...currentUsers,
-        [props.selectedTab]: username
-      };
-
-      chrome.storage.local.set({ lastUser: updatedUsers });
-  });
-}
+);
 
 onMounted(() => {
   handleTabChange();
-  chrome.storage.onChanged.addListener(handleStorageChange);
+  chrome.storage.onChanged.addListener((changes, area) => {
+    handleStorageChange(changes, area, props.selectedTab);
+  });
 });
 
 onBeforeUnmount(() => {
-  chrome.storage.onChanged.removeListener(handleStorageChange);
+  chrome.storage.onChanged.removeListener((changes, area) => {
+    handleStorageChange(changes, area, props.selectedTab);
+  });
 });
 </script>
 
 <template>
-  <!-- {{ users }} -->
+  <!-- {{ userDatas }} -->
   <form
     class="w-full flex flex-row flex-wrap xs:flex-nowrap justify-between items-end gap-2"
     @submit="onSubmit"
@@ -247,7 +228,7 @@ onBeforeUnmount(() => {
               <CommandList>
                 <CommandGroup>
                   <CommandItem
-                    v-for="user in Object.keys(users)"
+                    v-for="user in Object.keys(userDatas)"
                     :key="user"
                     :value="user"
                     @select="
