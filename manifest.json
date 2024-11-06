@@ -16,7 +16,8 @@
         "storage",
         "scripting",
         "tabs",
-        "notifications"
+        "notifications",
+        "downloads"
     ],
     "optional_permissions": [
         "topSites"
