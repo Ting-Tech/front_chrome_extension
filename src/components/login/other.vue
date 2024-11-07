@@ -26,71 +26,67 @@ import { File } from "lucide-vue-next";
 import { ref, watchEffect } from "vue";
 import Input from "../ui/input/Input.vue";
 import { toast } from "../ui/toast";
-import { OneTabUserDataType } from "./login";
+import { getUsers, setUsers, UsersDataType } from "./login";
 
 const isDrawerOpen = ref<boolean>(false);
 const showToggleGroup = ref<boolean>(false);
 const toggleValue = ref<string[]>([]);
 const selectAll = ref<boolean>(false);
-const fileInput = ref<OneTabUserDataType>({});
+const fileInput = ref<UsersDataType>({});
 const disabledTabs = ref<string[]>([]);
 
-const handleExport = () => {
-  chrome.storage.local.get("users", function (result) {
-    let selectedData = {};
-
-    toggleValue.value.forEach((item) => {
-      if (result.users?.[item]) {
-        selectedData = {
-          ...selectedData,
-          [item]: result.users?.[item],
-        };
-      }
-    });
-
-    if (selectedData) {
-      // 轉換 users 資料為 JSON 字符串
-      const jsonData = JSON.stringify(selectedData, null, 2);
-
-      // 創建一個 Blob 文件
-      const blob = new Blob([jsonData], { type: "application/json" });
-
-      // 創建一個 URL 來下載該 Blob 文件
-      const url = URL.createObjectURL(blob);
-
-      // 使用 chrome.downloads.download 下載文件
-      chrome.downloads.download({
-        url: url,
-        filename: "users.json",
-        saveAs: true,
-      });
-    } else {
-      console.log("No users data found in chrome.storage.local");
+const handleExport = async () => {
+  let result = await getUsers();
+  let selectedData = {};
+  
+  toggleValue.value.forEach((item) => {
+    if (result?.[item]) {
+      selectedData = {
+        ...selectedData,
+        [item]: result?.[item],
+      };
     }
   });
+
+  if (selectedData) {
+    // 轉換 users 資料為 JSON 字符串
+    const jsonData = JSON.stringify(selectedData, null, 2);
+
+    // 創建一個 Blob 文件
+    const blob = new Blob([jsonData], { type: "application/json" });
+
+    // 創建一個 URL 來下載該 Blob 文件
+    const url = URL.createObjectURL(blob);
+
+    // 下載文件
+    chrome.downloads.download({
+      url: url,
+      filename: "users.json",
+      saveAs: true,
+    });
+  } else {
+    console.log("No users data found in chrome localstorage");
+  }
 };
 
-const handleImport = () => {
-  chrome.storage.local.get("users", (result) => {
-    let currentData = result.users || {};
+const handleImport = async () => {
+  let result = await getUsers();
 
-    toggleValue.value.forEach((item) => {
-      const importUsers = fileInput.value[item];
+  toggleValue.value.forEach((item) => {
+    const importUsers = fileInput.value[item];
 
-      if (importUsers) {
-        currentData[item] = {
-          ...currentData?.[item],
-          ...importUsers,
-        };
-      }
-    });
-
-    chrome.storage.local.set({ users: currentData }, () => {
-      toast({ title: "資料已更新" });
-    });
-
-    handleClose();
+    if (importUsers) {
+      result[item] = {
+        ...result?.[item],
+        ...importUsers,
+      };
+    }
   });
+  
+  await setUsers(result);
+  toast({ title: "資料已更新" });
+
+  handleClose();
 };
 
 const handleSelectFile = (event: any) => {
@@ -106,7 +102,7 @@ const handleSelectFile = (event: any) => {
       // 確保內容是字串
       if (typeof fileContent === "string") {
         try {
-          const parsedData: OneTabUserDataType = JSON.parse(fileContent); // 解析 JSON 字符串
+          const parsedData: UsersDataType = JSON.parse(fileContent); // 解析 JSON 字符串
           fileInput.value = parsedData; // 儲存解析後的資料
           showToggleGroup.value = true;
 
