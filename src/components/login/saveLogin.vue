@@ -13,17 +13,28 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast/use-toast";
+import { defineProps } from "vue";
+import {
+  oneTabUserDatas,
+  tabProps,
+  loadUsers,
+  handleStorageChange,
+  getUsers,
+  setUsers,
+  UsersDataType,
+} from "./login";
 
+// 定義 tab 的 props
+const props = defineProps(tabProps);
+// 彈窗提示
 const { toast } = useToast();
-
-type UserData = { [key: string]: { password: string } };
-
-const userDatas = ref<UserData>({});
+// 定義輸入框的值
 const inputValue = ref<{ username: string; password: string }>({
   username: "",
   password: "",
 });
 
+// 定義表單驗證規則
 const formSchema = toTypedSchema(
   z.object({
     username: z.string().min(1).max(15),
@@ -31,53 +42,59 @@ const formSchema = toTypedSchema(
   })
 );
 
+// 使用 useForm 來處理表單驗證
 const { handleSubmit } = useForm({
   validationSchema: formSchema,
 });
 
-const saveToLocalStorage = () => {
+// 將用戶資料儲存到 localStorage
+const saveToLocalStorage = async () => {
   const { username, password } = inputValue.value;
-  userDatas.value[username] = { password };
+  const selectedTab = props.selectedTab;
+  let result = await getUsers();
 
-  chrome.storage.local.set({ users: userDatas.value }, () => {
-    toast({ title: `用戶 ${username} 已被儲存！` });
-  });
+  // 更新單個tab的資料
+  oneTabUserDatas.value = {
+    ...oneTabUserDatas.value,
+    [username]: { password },
+  };
+
+  // 更新選擇的 tab 的數據，保留其他 tab
+  const updatedUsers: UsersDataType = {
+    ...result,
+    [selectedTab]: oneTabUserDatas.value, // 這裡保留了對應 tab 的資料
+  };
+
+  await setUsers(updatedUsers);
+  toast({ title: `用戶 ${username} 已被儲存！` });
+
+  console.log("已儲存用戶資料", updatedUsers);
 };
 
+// 表單提交時的處理函數
 const onSubmit = handleSubmit((values) => {
   inputValue.value = values;
   saveToLocalStorage();
   inputValue.value = { username: "", password: "" };
 });
 
-// 監聽 local storage 更新
-const loadUsers = () => {
-  chrome.storage.local.get("users", (result) => {
-    if (result.users) {
-      userDatas.value = result.users;
-    }
-  });
-};
-
-const handleStorageChange = (changes: any, area: string) => {
-  if (area === "local" && changes.users) {
-    loadUsers();
-  }
-};
-
 onMounted(() => {
-  loadUsers();
-  chrome.storage.onChanged.addListener(handleStorageChange);
+  loadUsers(props.selectedTab);
+  chrome.storage.onChanged.addListener((changes, area) => {
+    handleStorageChange(changes, area, props.selectedTab);
+  });
 });
 
 onBeforeUnmount(() => {
-  chrome.storage.onChanged.removeListener(handleStorageChange);
+  chrome.storage.onChanged.removeListener((changes, area) => {
+    handleStorageChange(changes, area, props.selectedTab);
+  });
 });
 </script>
 
 <template>
   <!-- {{ userDatas }} -->
-  <form class="w-full space-y-6" @submit="onSubmit">
+  <form class="w-full space-y-2" @submit="onSubmit">
     <FormField v-slot="{ componentField }" name="username">
       <FormItem>
         <FormLabel>Username</FormLabel>
