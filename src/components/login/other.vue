@@ -115,11 +115,19 @@ const handleSelectFile = (event: any) => {
           disabledTabs.value = disabledTabs.value.filter((item) => {
             return !parsedData?.[item];
           });
+          
+          if (disabledTabs.value.length === 4) {
+            disabledTabs.value = [...disabledTabs.value, 'all'];
+            toast({ title: "匯入的檔案內無資料" });
+          };
+
+          toggleValue.value = ["dev", "uat", "staging", "prod", 'all'];
           toggleValue.value = toggleValue.value.filter((item) => {
             return !disabledTabs.value.includes(item);
           });
         } catch (error) {
           console.error("Invalid JSON file:", error);
+          toast({ title: "匯入的檔案無效" });
         }
       } else {
         console.error("The file content is not a valid string.");
@@ -139,7 +147,7 @@ const handleClose = () => {
 };
 
 const resetTabs = () => {
-  toggleValue.value = [];
+  toggleValue.value = ["dev", "uat", "staging", "prod", 'all'];
   disabledTabs.value = [];
   showToggleGroup.value = false;
 };
@@ -258,7 +266,10 @@ watchEffect(() => {
                       <Label for="prod"> PROD </Label>
                     </div>
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="all">
+                  <ToggleGroupItem 
+                    value="all"
+                    :disabled="disabledTabs.includes('all')"
+                  >
                     <div class="items-top flex space-x-2">
                       <Checkbox
                         id="all"
