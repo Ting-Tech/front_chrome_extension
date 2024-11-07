@@ -3,6 +3,7 @@ import { PropType, ref } from "vue";
 export type OneTabUserDataType = { [username: string]: { password: string } };
 export type UsersDataType = { [tab: string]: OneTabUserDataType };
 export const oneTabUserDatas = ref<OneTabUserDataType>({});
+export type LastUserType = { [tab: string]: string };
 
 export const tabProps = {
   selectedTab: {
@@ -43,18 +44,18 @@ export const setUsers = async (users: UsersDataType): Promise<void> => {
   });
 };
 
-export const setLastUsers = async (lastUser: String): Promise<void> => {
+export const getLastUsers = async (): Promise<LastUserType> => {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ lastUser }, () => {
-      resolve();
+    chrome.storage.local.get("lastUser", (result) => {
+      resolve(result.lastUser || {});
     });
   });
 };
 
-export const getLastUsers = async (): Promise<String> => {
+export const setLastUsers = async (lastUser: LastUserType): Promise<void> => {
   return new Promise((resolve) => {
-    chrome.storage.local.get("lastUser", (result) => {
-      resolve(result.lastUser || {});
+    chrome.storage.local.set({ lastUser }, () => {
+      resolve();
     });
   });
 };

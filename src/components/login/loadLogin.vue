@@ -69,27 +69,20 @@ const handleDelete = async (userToDelete: string) => {
   setUsers(updatedUsers);
 };
 
+// 處理 tab 切換
 const handleTabChange = async () => {
   loadUsers(props.selectedTab);
-  let result = await getUsers();
 
+  let result = await getLastUsers();
   const selectedTabData = result?.[props.selectedTab];
-
   if (selectedTabData) {
-    // 如果有上次使用者，請將第一個使用者名稱設定為上次使用者名稱
-    const username = Object.keys(selectedTabData)[0];
-    if (username) {
-      setFieldValue("username", username);
-    }
+    setFieldValue("username", selectedTabData);
   } else {
-    // 如果沒有上次使用者，請將使用者名稱設定為空字串
-    const userKeys = Object.keys(oneTabUserDatas.value);
-    if (userKeys.length > 0) {
-      setFieldValue("username", userKeys[0]);
-    }
+    setFieldValue("username", "");
   }
 };
 
+// 處理選擇的用戶名稱
 const handleHieldValue = async (username: string) => {
   setFieldValue("username", username);
   const currentUsers = await getLastUsers();
@@ -102,6 +95,7 @@ const handleHieldValue = async (username: string) => {
   await setLastUsers(updatedUsers);
 };
 
+// 自動登錄
 const autoLogin = async (username: string) => {
   let result = await getUsers();
   const selectedTabData = result?.[props.selectedTab];
