@@ -29,6 +29,7 @@ import { toast } from "../ui/toast";
 import { OneTabUserDataType } from "./login";
 
 const isDrawerOpen = ref<boolean>(false);
+const showToggleGroup = ref<boolean>(false);
 const toggleValue = ref<string[]>([]);
 const selectAll = ref<boolean>(false);
 const fileInput = ref<OneTabUserDataType>({});
@@ -107,6 +108,7 @@ const handleSelectFile = (event: any) => {
         try {
           const parsedData: OneTabUserDataType = JSON.parse(fileContent); // 解析 JSON 字符串
           fileInput.value = parsedData; // 儲存解析後的資料
+          showToggleGroup.value = true;
 
           // 處理 disable
           disabledTabs.value = ["dev", "uat", "staging", "prod"];
@@ -139,6 +141,7 @@ const handleClose = () => {
 const resetTabs = () => {
   toggleValue.value = [];
   disabledTabs.value = [];
+  showToggleGroup.value = false;
 };
 
 watchEffect(() => {
@@ -187,7 +190,22 @@ watchEffect(() => {
                 <CardDescription> Import the select data here </CardDescription>
               </CardHeader>
               <CardContent class="space-y-2">
+                <div class="relative w-full max-w-sm items-center">
+                  <Input
+                    id="file"
+                    type="file"
+                    accept=".json"
+                    @change="handleSelectFile"
+                    class="pl-10"
+                  />
+                  <span
+                    class="absolute start-0 inset-y-0 flex items-center justify-center px-2"
+                  >
+                    <File class="size-6 text-muted-foreground" />
+                  </span>
+                </div>
                 <ToggleGroup
+                  v-if="showToggleGroup"
                   v-model="toggleValue"
                   type="multiple"
                   class="flex flex-col content-start items-start"
@@ -250,15 +268,6 @@ watchEffect(() => {
                     </div>
                   </ToggleGroupItem>
                 </ToggleGroup>
-                <div class="flex flex-row items-center">
-                  <Label for="file"><File /></Label>
-                  <Input
-                    id="file"
-                    type="file"
-                    accept=".json"
-                    @change="handleSelectFile"
-                  />
-                </div>
               </CardContent>
               <CardFooter>
                 <Button class="w-full" @click="handleImport">Import</Button>
