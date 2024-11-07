@@ -14,7 +14,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast/use-toast";
 import { defineProps } from "vue";
-import { userDatas, tabProps, loadUsers, handleStorageChange } from "./login";
+import {
+  oneTabUserDatas,
+  tabProps,
+  loadUsers,
+  handleStorageChange,
+  getUsers,
+  setUsers,
+  UsersDataType,
+} from "./login";
 
 // 定義 tab 的 props
 const props = defineProps(tabProps);
@@ -39,33 +47,28 @@ const { handleSubmit } = useForm({
   validationSchema: formSchema,
 });
 
-// 儲存用戶資料到 local storage
-const saveToLocalStorage = () => {
+// 將用戶資料儲存到 localStorage
+const saveToLocalStorage = async () => {
   const { username, password } = inputValue.value;
   const selectedTab = props.selectedTab;
+  let result = await getUsers();
 
-  // 根據 selectedTab 儲存對應的用戶資料
-  userDatas.value[selectedTab] = {
-    ...userDatas.value[selectedTab],
+  // 更新單個tab的資料
+  oneTabUserDatas.value = {
+    ...oneTabUserDatas.value,
     [username]: { password },
   };
 
-  chrome.storage.local.get("users", (result) => {
-    const currentUsers = result.users || {}; // 取得現有的 users 資料，若無則設置為空對象
+  // 更新選擇的 tab 的數據，保留其他 tab
+  const updatedUsers: UsersDataType = {
+    ...result,
+    [selectedTab]: oneTabUserDatas.value, // 這裡保留了對應 tab 的資料
+  };
 
-    // 更新選擇的 tab 的數據，保留其他 tab
-    const updatedUsers = {
-      ...currentUsers,
-      [selectedTab]: userDatas.value[selectedTab], // 這裡保留了對應 tab 的資料
-    };
+  await setUsers(updatedUsers);
+  toast({ title: `用戶 ${username} 已被儲存！` });
 
-    chrome.storage.local.set({ users: updatedUsers }, () => {
-      // 儲存更新後的資料
-      toast({ title: `用戶 ${username} 已被儲存！` });
-    });
-
-    console.log("已儲存用戶資料", updatedUsers);
-  });
+  console.log("已儲存用戶資料", updatedUsers);
 };
 
 // 表單提交時的處理函數

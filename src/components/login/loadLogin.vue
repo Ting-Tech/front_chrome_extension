@@ -28,7 +28,17 @@ import {
 } from "@/components/ui/popover";
 import { toast } from "@/components/ui/toast";
 import { Trash } from "lucide-vue-next";
-import { userDatas, tabProps, loadUsers, handleStorageChange } from "./login";
+import {
+  oneTabUserDatas,
+  tabProps,
+  loadUsers,
+  handleStorageChange,
+  getUsers,
+  setUsers,
+  setLastUsers,
+  getLastUsers,
+  UsersDataType,
+} from "./login";
 
 const props = defineProps(tabProps);
 
@@ -44,60 +54,64 @@ const { handleSubmit, setFieldValue, values } = useForm({
   validationSchema: formSchema,
 });
 
-const handleDelete = (userToDelete: string) => {
-  const { [userToDelete]: _, ...newUsers } = userDatas.value;
-  userDatas.value = newUsers;
+const handleDelete = async (userToDelete: string) => {
+  const { [userToDelete]: _, ...remainingUsers } = oneTabUserDatas.value;
 
-  chrome.storage.local.get("users", (result) => {
-    const currentUsers = result.users || {};
+  oneTabUserDatas.value = remainingUsers;
 
-    const updatedUsers = {
-      ...currentUsers,
-      [props.selectedTab]: newUsers,
-    };
+  let currentUsers = await getUsers();
 
-    chrome.storage.local.set({ users: updatedUsers }, () => {
-      toast({ title: `用戶 ${userToDelete} 已被刪除！` });
-    });
-  });
+  const updatedUsers: UsersDataType = {
+    ...currentUsers,
+    [props.selectedTab]: oneTabUserDatas.value,
+  };
+
+  setUsers(updatedUsers);
 };
 
-const handleTabChange = () => {
+const handleTabChange = async () => {
   loadUsers(props.selectedTab);
-  chrome.storage.local.get("lastUser", (result) => {
-    const selectedTabData = result.lastUser?.[props.selectedTab];
+  let result = await getUsers();
 
-    if (selectedTabData) {
-      setFieldValue("username", selectedTabData);
-    } else {
-      const userKeys = Object.keys(userDatas.value);
-      if (userKeys.length > 0) {
-        setFieldValue("username", userKeys[0]);
-      }
+  const selectedTabData = result?.[props.selectedTab];
+
+  if (selectedTabData) {
+    // 如果有上次使用者，請將第一個使用者名稱設定為上次使用者名稱
+    const username = Object.keys(selectedTabData)[0];
+    if (username) {
+      setFieldValue("username", username);
     }
-  });
+  } else {
+    // 如果沒有上次使用者，請將使用者名稱設定為空字串
+    const userKeys = Object.keys(oneTabUserDatas.value);
+    if (userKeys.length > 0) {
+      setFieldValue("username", userKeys[0]);
+    }
+  }
 };
 
-const handleHieldValue = (username: string) => {
+const handleHieldValue = async (username: string) => {
   setFieldValue("username", username);
+  const currentUsers = await getLastUsers();
 
-  chrome.storage.local.get("lastUser", (result) => {
-    const currentUsers = result.lastUser || {};
+  const updatedUsers = {
+    ...currentUsers,
+    [props.selectedTab]: username,
+  };
 
-    const updatedUsers = {
-      ...currentUsers,
-      [props.selectedTab]: username,
-    };
-
-    chrome.storage.local.set({ lastUser: updatedUsers });
-  });
+  await setLastUsers(updatedUsers);
 };
 
-const loadFromLocalStorage = async (username: string) => {
-  chrome.storage.local.get("users", async (result) => {
-    const selectedTabData = result.users?.[props.selectedTab];
-    if (selectedTabData && selectedTabData[username]) {
-      const { password } = selectedTabData[username];
+const autoLogin = async (username: string) => {
+  let result = await getUsers();
+  const selectedTabData = result?.[props.selectedTab];
+
+  if (selectedTabData) {
+    // Ensure you're getting the password from the selected tab and user
+    const user = selectedTabData[username];
+    if (user) {
+      const { password } = user;
+
       try {
         const [tab] = await chrome.tabs.query({
           active: true,
@@ -165,12 +179,14 @@ const loadFromLocalStorage = async (username: string) => {
         console.error("注入腳本時出錯:", error);
       }
     } else {
+      toast({ title: "用戶未找到" });
+      console.error("用戶未找到");
     }
-  });
+  }
 };
 
 const onSubmit = handleSubmit((values) => {
-  loadFromLocalStorage(values.username);
+  autoLogin(values.username);
 });
 
 watch(
@@ -195,7 +211,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- {{ userDatas }} -->
+  <!-- {{ oneTabUserDatas }} -->
   <form
     class="w-full flex flex-row flex-wrap xs:flex-nowrap justify-between items-end gap-2"
     @submit="onSubmit"
@@ -228,7 +244,7 @@ onBeforeUnmount(() => {
               <CommandList>
                 <CommandGroup>
                   <CommandItem
-                    v-for="user in Object.keys(userDatas)"
+                    v-for="user in Object.keys(oneTabUserDatas)"
                     :key="user"
                     :value="user"
                     @select="

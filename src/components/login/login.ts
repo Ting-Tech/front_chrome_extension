@@ -1,11 +1,8 @@
 import { PropType, ref } from "vue";
 
-export type UserDataType = {
-  [tab: string]: {
-    [username: string]: { password: string };
-  };
-};
-export const userDatas = ref<UserDataType>({});
+export type OneTabUserDataType = { [username: string]: { password: string } };
+export type UsersDataType = { [tab: string]: OneTabUserDataType };
+export const oneTabUserDatas = ref<OneTabUserDataType>({});
 
 export const tabProps = {
   selectedTab: {
@@ -15,17 +12,11 @@ export const tabProps = {
   },
 };
 
-// 監聽 local storage 更新
-export const loadUsers = (selectedTab: string) => {
-  chrome.storage.local.get("users", (result) => {
-    const selectedTabData = result.users?.[selectedTab];
-    if (selectedTabData) {
-      userDatas.value = selectedTabData;
-    }
-  });
+export const loadUsers = async (selectedTab: string) => {
+  const result = await getUsers();
+  oneTabUserDatas.value = result?.[selectedTab] ? result[selectedTab] : {};
 };
 
-// 監聽 local storage 變化
 export const handleStorageChange = (
   changes: any,
   area: string,
@@ -34,4 +25,36 @@ export const handleStorageChange = (
   if (area === "local" && changes.users) {
     loadUsers(selectedTab);
   }
+};
+
+export const getUsers = async (): Promise<UsersDataType> => {
+  return new Promise((resolve) => {
+    chrome.storage.local.get("users", (result) => {
+      resolve(result.users || {});
+    });
+  });
+};
+
+export const setUsers = async (users: UsersDataType): Promise<void> => {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ users }, () => {
+      resolve();
+    });
+  });
+};
+
+export const setLastUsers = async (lastUser: String): Promise<void> => {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ lastUser }, () => {
+      resolve();
+    });
+  });
+};
+
+export const getLastUsers = async (): Promise<String> => {
+  return new Promise((resolve) => {
+    chrome.storage.local.get("lastUser", (result) => {
+      resolve(result.lastUser || {});
+    });
+  });
 };
