@@ -26,11 +26,13 @@ import { File } from "lucide-vue-next";
 import { ref, watchEffect } from "vue";
 import Input from "../ui/input/Input.vue";
 import { toast } from "../ui/toast";
+import { UserDataType } from "./login";
 
 const isDrawerOpen = ref<boolean>(false);
 const toggleValue = ref<string[]>([]);
 const selectAll = ref<boolean>(false);
-const fileInput = ref<{ [key: string]: { [key: string]: { password: string } }}>({});
+const fileInput = ref<UserDataType>({});
+const disabledTabs = ref<string[]>([]);
 
 const handleExport = () => {
   chrome.storage.local.get("users", function(result) {
@@ -68,19 +70,16 @@ const handleExport = () => {
 }
 
 const handleImport = () => {
-  chrome.storage.local.get("users", function(result) {
+  chrome.storage.local.get("users", (result) => {
     let currentData = result.users || {};
 
     toggleValue.value.forEach((item) => {
       const importUsers = fileInput.value[item];
 
       if (importUsers) {
-        currentData = {
-          ...currentData,
-          [item]: {
-            ...currentData?.[item],
-            ...importUsers
-          }
+        currentData[item] = {
+          ...currentData?.[item],
+          ...importUsers
         };
       }
     });
@@ -88,13 +87,14 @@ const handleImport = () => {
     chrome.storage.local.set({ users: currentData }, () => {
       toast({ title: "資料已更新" });
     });
-    isDrawerOpen.value = false;
+
+    handleClose();
   });
 }
 
 const handleSelectFile = (event: any) => {
   const file = event.target.files[0]; // 獲取選擇的檔案
-  
+
   if (file && file.type === 'application/json') {
     const reader = new FileReader();
     
@@ -105,8 +105,17 @@ const handleSelectFile = (event: any) => {
       // 確保內容是字串
       if (typeof fileContent === 'string') {
         try {
-          const parsedData = JSON.parse(fileContent); // 解析 JSON 字符串
+          const parsedData: UserDataType = JSON.parse(fileContent); // 解析 JSON 字符串
           fileInput.value = parsedData; // 儲存解析後的資料
+
+          // 處理 disable
+          disabledTabs.value = ['dev', 'uat', 'staging', 'prod'];
+          disabledTabs.value = disabledTabs.value.filter((item) => {
+            return !parsedData?.[item];
+          });
+          toggleValue.value = toggleValue.value.filter((item) => {
+            return !disabledTabs.value.includes(item);
+          });
         } catch (error) {
           console.error("Invalid JSON file:", error);
         }
@@ -120,14 +129,25 @@ const handleSelectFile = (event: any) => {
   } else {
     console.error("Please upload a valid JSON file.");
   }
-}
+};
+
+const handleClose = () => {
+  isDrawerOpen.value = false;
+  resetTabs();
+};
+
+const resetTabs = () => {
+  toggleValue.value = [];
+  disabledTabs.value = [];
+};
 
 watchEffect(() => {
   if (!selectAll.value && toggleValue.value.includes('all')) {
     toggleValue.value = ['dev', 'uat', 'staging', 'prod', 'all'];
+    toggleValue.value = toggleValue.value.filter((item) => !disabledTabs.value.includes(item));
     selectAll.value = true;
   }
-  else if (selectAll.value && toggleValue.value.length != 5) {
+  else if (selectAll.value && toggleValue.value.length != (5 - disabledTabs.value.length)) {
     toggleValue.value = toggleValue.value.filter((item) => item !== 'all');
     selectAll.value = false;
   }
@@ -147,7 +167,7 @@ watchEffect(() => {
             All the other operation will be here
           </DrawerDescription>
         </DrawerHeader>
-        <Tabs default-value="import" class="w-full">
+        <Tabs default-value="import" class="w-full" @update:modelValue="resetTabs">
           <TabsList class="grid w-full grid-cols-2">
             <TabsTrigger value="import"> Import </TabsTrigger>
             <TabsTrigger value="export"> Export </TabsTrigger>
@@ -164,25 +184,25 @@ watchEffect(() => {
                   type="multiple"
                   class="flex flex-col content-start items-start"
                 >
-                  <ToggleGroupItem value="dev">
+                  <ToggleGroupItem value="dev" :disabled="disabledTabs.includes('dev')">
                     <div class="items-top flex space-x-2">
                       <Checkbox id="dev" :checked="toggleValue.includes('dev')" />
                       <Label for="dev"> DEV </Label>
                     </div>
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="uat">
+                  <ToggleGroupItem value="uat" :disabled="disabledTabs.includes('uat')">
                     <div class="items-top flex space-x-2">
                       <Checkbox id="uat" :checked="toggleValue.includes('uat')" />
                       <Label for="uat"> UAT </Label>
                     </div>
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="staging">
+                  <ToggleGroupItem value="staging" :disabled="disabledTabs.includes('staging')">
                     <div class="items-top flex space-x-2">
                       <Checkbox id="staging" :checked="toggleValue.includes('staging')" />
                       <Label for="staging"> STAGING </Label>
                     </div>
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="prod">
+                  <ToggleGroupItem value="prod" :disabled="disabledTabs.includes('prod')">
                     <div class="items-top flex space-x-2">
                       <Checkbox id="prod" :checked="toggleValue.includes('prod')" />
                       <Label for="prod"> PROD </Label>
@@ -197,7 +217,7 @@ watchEffect(() => {
                 </ToggleGroup>
                 <div class="flex flex-row items-center">
                   <Label for="file"><File /></Label>
-                  <Input id="file" type="file" accept=".json" ref="fileInput" @change="handleSelectFile" />
+                  <Input id="file" type="file" accept=".json" @change="handleSelectFile" />
                 </div>
               </CardContent>
               <CardFooter>
@@ -257,7 +277,7 @@ watchEffect(() => {
         </Tabs>
         <DrawerFooter>
           <DrawerClose as-child>
-            <Button variant="outline" class="w-full"> Close </Button>
+            <Button variant="outline" class="w-full" @click="handleClose"> Close </Button>
           </DrawerClose>
         </DrawerFooter>
       </div>

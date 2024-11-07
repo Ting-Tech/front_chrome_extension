@@ -1,6 +1,6 @@
 import { PropType, ref } from "vue";
 
-type UserDataType = {
+export type UserDataType = {
   [tab: string]: {
     [username: string]: { password: string };
   };
