@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "cms-tool",
+  "version": "2.0.0",
+  "description": "使用 Vue 3 開發的瀏覽器插件示例",
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "vite.svg",
+      "48": "vite.svg",
+      "128": "vite.svg"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "tabs",
+    "notifications",
+    "downloads"
+  ],
+  "optional_permissions": [
+    "topSites"
+  ],
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "service-worker-loader.js",
+    "type": "module"
+  },
+  "devtools_page": "src/panel-register.html"
+}
